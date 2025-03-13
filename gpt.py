@@ -1,79 +1,104 @@
 import pybamm
 import matplotlib.pyplot as plt
+import numpy as np
 
-# ----- Setup the model with thermal effects -----
-# Use the SPMe model with a lumped thermal model
-options = {"thermal": "lumped"}
-model = pybamm.lithium_ion.SPMe(options=options)
+def run_experiment(current_amp):
+    """
+    Creates and runs a PyBaMM experiment that:
+    1) Charges the cell at 1 A until 4.2 V,
+    2) Holds at 4.2 V until 50 mA,
+    3) Discharges at the specified current_amp (A) until 3.0 V.
+    
+    Returns time, voltage, capacity, temperature, and SoC for the discharge step.
+    """
+    # Define the experiment
+    experiment = pybamm.Experiment([
+        f"Discharge at {current_amp} A until 3.0 V",
+    ], period="10 seconds")
 
-# ----- Update parameter values for our simulation -----
-# Get default parameters from the model
-param = model.default_parameter_values
+    # Use SPMe with a lumped thermal model
+    options = {"thermal": "lumped"}
+    model = pybamm.lithium_ion.SPMe(options=options)
 
-# Set the ambient temperature to 30°C (in Kelvin)
-param["Ambient temperature [K]"] = 303.15
+    # Choose a more realistic parameter set, e.g., Chen2020
+    param = pybamm.ParameterValues("Chen2020")
+    # Set nominal capacity, cutoffs, and ambient temperature
+    param["Nominal cell capacity [A.h]"] = 5
+    param["Lower voltage cut-off [V]"] = 3.0
+    param["Upper voltage cut-off [V]"] = 4.2
+    param["Ambient temperature [K]"] = 253.15  # -20°C
 
-# Set the nominal capacity and discharge current for a 1C rate.
-# Here we use 2.9 A·h as an example nominal capacity,
-# so the constant discharge current is 2.9 A.
-param["Nominal cell capacity [A.h]"] = 2.9
-param["Current function [A]"] = 2.9
+    # Create and run the simulation
+    sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
+    solution = sim.solve()
 
-# Set a lower voltage cut-off so that the simulation stops when reached
-param["Lower voltage cut-off [V]"] = 3.0
+    # The experiment has multiple steps (charge, hold, discharge).
+    # We extract data from the *final discharge step*.
+    discharge_step = solution.cycles[-1].steps[-1]
+    
+    time = discharge_step["Time [s]"].entries
+    voltage = discharge_step["Voltage [V]"].entries
+    capacity = discharge_step["Discharge capacity [A.h]"].entries
+    temperature = discharge_step["Cell temperature [K]"].entries
 
-# ----- Create and solve the simulation -----
-sim = pybamm.Simulation(model, parameter_values=param)
-# Solve over a long enough time span; the simulation will terminate when the cutoff voltage is hit.
-solution = sim.solve([0, 3600])
+    # If temperature is a 2D array, convert to 1D (e.g., take the first row)
+    if temperature.ndim > 1:
+        temperature = temperature[0]
 
-# ----- Extract key variables from the solution -----
-# ----- Extract key variables from the solution -----
-time = solution["Time [s]"].entries                # Time in seconds
-voltage = solution["Voltage [V]"].entries           # Terminal voltage in V
-# "Discharge capacity [A.h]" gives the integrated capacity during discharge
-discharge_capacity = solution["Discharge capacity [A.h]"].entries  
-# "Cell temperature [K]" is available because we enabled the thermal model
-temperature = solution["Cell temperature [K]"].entries    
-# If temperature is a 2D array, extract a 1D array matching time dimension
-if temperature.ndim > 1:
-	temperature = temperature[0]  # Taking first row/column or averaging might be needed
-# Compute state-of-charge (SoC) as a percentage.
-# Assume 100% at the start and SoC decreases as capacity is extracted.
-# SoC = 100 * (1 - (discharge capacity / nominal capacity))
-nom_cap = param["Nominal cell capacity [A.h]"]
-SoC = 100 * (1 - (discharge_capacity / nom_cap))
+    # Compute SoC (%), assuming 100% at start of discharge
+    nom_cap = param["Nominal cell capacity [A.h]"]
+    SoC = 100 * (1 - (capacity / nom_cap))
+
+    return time, voltage, capacity, temperature, SoC
+
+# Run the experiment at different C-rates
+# 0.5C = 1.45 A, 1C = 2.9 A, 2C = 5.8 A
+time_05C, volt_05C, cap_05C, temp_05C, SoC_05C = run_experiment(2.5)
+time_1C,  volt_1C,  cap_1C,  temp_1C,  SoC_1C  = run_experiment(5)
+time_2C,  volt_2C,  cap_2C,  temp_2C,  SoC_2C  = run_experiment(10)
 
 # ----- Plotting the results -----
 fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
 # 1. Voltage vs. Discharge Capacity
-axs[0, 0].plot(discharge_capacity, voltage, 'b-', linewidth=2)
+axs[0, 0].plot(cap_05C, volt_05C, 'k:', linewidth=2, label='0.5C (2.5 A)')
+axs[0, 0].plot(cap_1C,  volt_1C,  'b-', linewidth=2, label='1C (5.0 A)')
+axs[0, 0].plot(cap_2C,  volt_2C,  'c--', linewidth=2, label='2C (10.0 A)')
 axs[0, 0].set_xlabel("Discharge Capacity (A·h)")
 axs[0, 0].set_ylabel("Voltage (V)")
 axs[0, 0].set_title("Voltage vs. Discharge Capacity")
 axs[0, 0].grid(True)
+axs[0, 0].legend()
 
 # 2. State-of-Charge vs. Time
-axs[0, 1].plot(time, SoC, 'g-', linewidth=2)
+axs[0, 1].plot(time_05C, SoC_05C, 'k:', linewidth=2, label='0.5C (2.5 A)')
+axs[0, 1].plot(time_1C,  SoC_1C,  'g-', linewidth=2, label='1C (5.0 A)')
+axs[0, 1].plot(time_2C,  SoC_2C,  'k--', linewidth=2, label='2C (10.0 A)')
 axs[0, 1].set_xlabel("Time (s)")
 axs[0, 1].set_ylabel("State of Charge (%)")
 axs[0, 1].set_title("SoC vs. Time")
 axs[0, 1].grid(True)
+axs[0, 1].legend()
 
 # 3. Cell Temperature vs. Time
-axs[1, 0].plot(time, temperature, 'r-', linewidth=2)
+axs[1, 0].plot(time_05C, temp_05C, 'r:', linewidth=2, label='0.5C (2.5 A)')
+axs[1, 0].plot(time_1C,  temp_1C,  'r-', linewidth=2, label='1C (5.0 A)')
+axs[1, 0].plot(time_2C,  temp_2C,  'y--', linewidth=2, label='2C (10.0 A)')
 axs[1, 0].set_xlabel("Time (s)")
 axs[1, 0].set_ylabel("Cell Temperature (K)")
 axs[1, 0].set_title("Cell Temperature vs. Time")
 axs[1, 0].grid(True)
+axs[1, 0].legend()
 
 # 4. Discharge Capacity vs. Time
-axs[1, 1].plot(time, discharge_capacity, 'm-', linewidth=2)
+axs[1, 1].plot(time_05C, cap_05C, 'm:', linewidth=2, label='0.5C (2.5 A)')
+axs[1, 1].plot(time_1C,  cap_1C,  'm-', linewidth=2, label='1C (5.0 A)')
+axs[1, 1].plot(time_2C,  cap_2C,  color='orange', linestyle='--', linewidth=2, label='2C (10.0 A)')
 axs[1, 1].set_xlabel("Time (s)")
 axs[1, 1].set_ylabel("Discharge Capacity (A·h)")
 axs[1, 1].set_title("Discharge Capacity vs. Time")
 axs[1, 1].grid(True)
+axs[1, 1].legend()
 
 plt.tight_layout()
 plt.show()
