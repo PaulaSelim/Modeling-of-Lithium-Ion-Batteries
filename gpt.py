@@ -18,7 +18,7 @@ def run_experiment(current_amp):
 
     # Use SPMe with a lumped thermal model
     options = {"thermal": "lumped"}
-    model = pybamm.lithium_ion.SPMe(options=options)
+    model = pybamm.lithium_ion.DFN(options=options)
 
     # Choose a more realistic parameter set, e.g., Chen2020
     param = pybamm.ParameterValues("Chen2020")
@@ -26,7 +26,7 @@ def run_experiment(current_amp):
     param["Nominal cell capacity [A.h]"] = 5
     param["Lower voltage cut-off [V]"] = 3.0
     param["Upper voltage cut-off [V]"] = 4.2
-    param["Ambient temperature [K]"] = 253.15  # -20°C
+    param["Ambient temperature [K]"] = 293.15  # 20°C
 
     # Create and run the simulation
     sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
