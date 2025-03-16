@@ -91,7 +91,7 @@ def plot_experiment_results(results: dict) -> None:
     """Plot the results of the experiments on four subplots.
     """
     logger.info("Generating plots for experiment results.")
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    fig, axs = plt.subplots(2, 2, figsize=(10, 7))
 
     # Plot 1: Voltage vs. Discharge Capacity
     ax_v_cap = axs[0, 0]
