@@ -210,7 +210,7 @@ def plot_simulation_results(data: Dict[str, np.ndarray]) -> None:
     """
     logger.info("Generating plots")
     
-    fig, axs = plt.subplots(2, 3, figsize=(10, 7))
+    fig, axs = plt.subplots(2, 2, figsize=(10, 7))
     axs = axs.flatten()
 
     # Plot cell voltage for each cell and the average voltage
@@ -247,18 +247,7 @@ def plot_simulation_results(data: Dict[str, np.ndarray]) -> None:
     axs[3].set_title("Discharge Capacity vs Time")
     axs[3].grid(True)
 
-    # Plot total heating for each cell and average
-    for i in range(data["heating"].shape[1]):
-        axs[4].plot(data["time"], data["heating"][:, i], label=f"Cell {i + 1}")
-    axs[4].plot(data["time"], data["heating_avg"], "k--", label="Average")
-    axs[4].set_xlabel("Time (s)")
-    axs[4].set_ylabel("Heating (W/m³)")
-    axs[4].set_title("Total Heating vs Time")
-    axs[4].legend()
-    axs[4].grid(True)
-
-    # Remove unused subplot and adjust layout
-    fig.delaxes(axs[5])
+    
     plt.tight_layout()
     
     logger.info("Displaying plots")
