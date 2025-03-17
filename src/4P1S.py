@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger("battery_pack_simulation")
 
 # Default configuration parameters that can be overridden by environment variables
-AMBIENT_TEMP = float(os.environ.get("AMBIENT_TEMP", 293.15))  # K (20°C)
+AMBIENT_TEMP = float(os.environ.get("AMBIENT_TEMP", 293.15+40))  # K (20°C)
 NUM_PARALLEL = int(os.environ.get("NUM_PARALLEL", 4))
 NUM_SERIES = int(os.environ.get("NUM_SERIES", 1))
 BUSBAR_RESISTANCE = float(os.environ.get("BUSBAR_RESISTANCE", 1e-3))  # Ohm
@@ -29,7 +29,7 @@ DISCHARGE_CURRENT = float(os.environ.get("DISCHARGE_CURRENT", 5.0))  # A
 CUT_OFF_VOLTAGE = float(os.environ.get("CUT_OFF_VOLTAGE", 3.3))  # V
 INITIAL_SOC = float(os.environ.get("INITIAL_SOC", 1))
 NOMINAL_CAPACITY = float(os.environ.get("NOMINAL_CAPACITY", 5.0))  # Ah
-EXPERIMENT_PERIOD = os.environ.get("EXPERIMENT_PERIOD", "100 second")
+EXPERIMENT_PERIOD = os.environ.get("EXPERIMENT_PERIOD", "10 second")
 EXPERIMENT_TIME = float(os.environ.get("EXPERIMENT_TIME", 15000))  # seconds
 # Circuit diagram settings
 DRAW_CIRCUIT = os.environ.get("DRAW_CIRCUIT", "False").lower() == "true"
@@ -59,6 +59,8 @@ def configure_simulation() -> Dict[str, Any]:
     # Set up battery parameters using Chen2020
     parameter_values = pybamm.ParameterValues("Chen2020")
     parameter_values.update({"Ambient temperature [K]": AMBIENT_TEMP})
+    parameter_values.update({"Initial temperature [K]": 293.15})
+    
     
     # Create a pack with specified resistances and initial guesses
     netlist = lp.setup_circuit(
@@ -78,8 +80,10 @@ def configure_simulation() -> Dict[str, Any]:
     )
     
     # Set input temperatures for each cell with 2°C increments starting from ambient
-    temps = AMBIENT_TEMP + 2 * np.arange(NUM_PARALLEL)
-    inputs = {"Input temperature [K]": temps}
+    htc = 10.0  # W/m²K (example value; adjust based on your system)
+    inputs = {
+        "Total heat transfer coefficient [W.m-2.K-1]": htc * np.ones(NUM_PARALLEL * NUM_SERIES)
+    }
     
     logger.info(f"Simulation configured: {NUM_PARALLEL}p{NUM_SERIES}s pack at {AMBIENT_TEMP}K")
     
@@ -107,7 +111,7 @@ def run_simulation(config: Dict[str, Any]) -> Dict[str, np.ndarray]:
     try:
         output = lp.solve(
             netlist=config["netlist"],
-            sim_func=lp.thermal_external,
+            sim_func=lp.thermal_simulation,
             inputs=config["inputs"],
             parameter_values=config["parameter_values"],
             experiment=config["experiment"],
