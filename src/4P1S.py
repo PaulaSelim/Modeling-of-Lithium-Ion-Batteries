@@ -19,20 +19,20 @@ logger = logging.getLogger("battery_pack_simulation")
 
 # Default configuration parameters that can be overridden by environment variables
 AMBIENT_TEMP = float(os.environ.get("AMBIENT_TEMP", 293.15+40))  # K (20°C)
-NUM_PARALLEL = int(os.environ.get("NUM_PARALLEL", 4))
-NUM_SERIES = int(os.environ.get("NUM_SERIES", 1))
+NUM_PARALLEL = int(os.environ.get("NUM_PARALLEL", 3))
+NUM_SERIES = int(os.environ.get("NUM_SERIES", 4))
 BUSBAR_RESISTANCE = float(os.environ.get("BUSBAR_RESISTANCE", 1e-3))  # Ohm
 CONNECTION_RESISTANCE = float(os.environ.get("CONNECTION_RESISTANCE", 1e-2))  # Ohm
 INTERNAL_RESISTANCE = float(os.environ.get("INTERNAL_RESISTANCE", 5e-2))  # Ohm
 INITIAL_VOLTAGE = float(os.environ.get("INITIAL_VOLTAGE", 4.0))  # V
-DISCHARGE_CURRENT = float(os.environ.get("DISCHARGE_CURRENT", 5.0))  # A
-CUT_OFF_VOLTAGE = float(os.environ.get("CUT_OFF_VOLTAGE", 3.3))  # V
+DISCHARGE_CURRENT = float(os.environ.get("DISCHARGE_CURRENT", 15.0))  # A
+CUT_OFF_VOLTAGE = float(os.environ.get("CUT_OFF_VOLTAGE", 2.5))  # V
 INITIAL_SOC = float(os.environ.get("INITIAL_SOC", 1))
 NOMINAL_CAPACITY = float(os.environ.get("NOMINAL_CAPACITY", 5.0))  # Ah
 EXPERIMENT_PERIOD = os.environ.get("EXPERIMENT_PERIOD", "10 second")
 EXPERIMENT_TIME = float(os.environ.get("EXPERIMENT_TIME", 15000))  # seconds
 # Circuit diagram settings
-DRAW_CIRCUIT = os.environ.get("DRAW_CIRCUIT", "False").lower() == "true"
+DRAW_CIRCUIT = os.environ.get("DRAW_CIRCUIT", "false").lower() == "true"
 CIRCUIT_DPI = int(os.environ.get("CIRCUIT_DPI", 1200))
 CIRCUIT_CPT_SIZE = float(os.environ.get("CIRCUIT_CPT_SIZE", 1.0))
 CIRCUIT_NODE_SPACING = float(os.environ.get("CIRCUIT_NODE_SPACING", 2.5))
@@ -203,7 +203,7 @@ def process_simulation_output(output: Dict[str, np.ndarray]) -> Dict[str, np.nda
 def plot_simulation_results(data: Dict[str, np.ndarray]) -> None:
     """Plot simulation results.
     
-    Creates plots for voltage, SoC, temperature, discharge capacity, and heating results.
+    Creates plots for overall pack voltage, SoC, temperature, discharge capacity, and heating results.
     
     Args:
         data: Dictionary containing processed simulation data.
@@ -213,40 +213,34 @@ def plot_simulation_results(data: Dict[str, np.ndarray]) -> None:
     fig, axs = plt.subplots(2, 2, figsize=(10, 7))
     axs = axs.flatten()
 
-    # Plot cell voltage for each cell and the average voltage
-    for i in range(data["voltage"].shape[1]):
-        axs[0].plot(data["time"], data["voltage"][:, i], label=f"Cell {i + 1}")
-    axs[0].plot(data["time"], data["voltage_avg"], "k--", label="Average")
-    axs[0].set_xlabel("Time (s)")
+    # Plot pack voltage vs discharge capacity instead of time
+    total_capacity = data["capacity_Ah"] * NUM_PARALLEL
+    axs[0].plot(total_capacity, data["voltage_avg"] * NUM_SERIES, "b-", linewidth=2)
+    axs[0].set_xlabel("Discharge Capacity (Ah)")
     axs[0].set_ylabel("Voltage (V)")
-    axs[0].set_title("Cell Voltage Distribution")
-    axs[0].legend()
+    axs[0].set_title("Pack Voltage vs Discharge Capacity")
     axs[0].grid(True)
 
-    # Plot state-of-charge vs. time
-    axs[1].plot(data["time"], data["SoC"], "g-")
+    # Plot state-of-charge vs. time as percentage
+    axs[1].plot(data["time"], data["SoC"] * 100, "g-", linewidth=2)
     axs[1].set_xlabel("Time (s)")
-    axs[1].set_ylabel("SoC")
-    axs[1].set_title("State of Charge vs Time")
+    axs[1].set_ylabel("SoC (%)")
+    axs[1].set_title("Pack State of Charge vs Time")
     axs[1].grid(True)
 
-    # Plot cell temperature for each cell and average
-    for i in range(data["temperature"].shape[1]):
-        axs[2].plot(data["time"], data["temperature"][:, i] - 273.15, label=f"Cell {i + 1}")
-    axs[2].plot(data["time"], data["temperature_avg"] - 273.15, "k--", label="Average")
+    # Plot average pack temperature instead of individual cells
+    axs[2].plot(data["time"], data["temperature_avg"] - 273.15, "r-", linewidth=2)
     axs[2].set_xlabel("Time (s)")
     axs[2].set_ylabel("Temperature (°C)")
-    axs[2].set_title("Cell Temperature vs Time")
-    axs[2].legend()
+    axs[2].set_title("Pack Average Temperature vs Time")
     axs[2].grid(True)
 
-    # Plot discharge capacity vs. time
-    axs[3].plot(data["time"], data["capacity_Ah"]*NUM_PARALLEL, "m-")
+    # Plot total pack discharge capacity vs. time
+    axs[3].plot(data["time"], data["capacity_Ah"] * NUM_PARALLEL, "m-", linewidth=2)
     axs[3].set_xlabel("Time (s)")
     axs[3].set_ylabel("Discharge Capacity (Ah)")
-    axs[3].set_title("Discharge Capacity vs Time")
+    axs[3].set_title("Pack Discharge Capacity vs Time")
     axs[3].grid(True)
-
     
     plt.tight_layout()
     
