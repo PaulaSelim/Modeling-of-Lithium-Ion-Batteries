@@ -20,7 +20,7 @@ load_dotenv()
 
 # Global configuration variables
 NOMINAL_CAPACITY_AH = float(os.getenv("NOMINAL_CAPACITY_AH", "5.0"))
-LOWER_VOLTAGE_CUTOFF_V = float(os.getenv("LOWER_VOLTAGE_CUTOFF_V", "3.0"))
+LOWER_VOLTAGE_CUTOFF_V = float(os.getenv("LOWER_VOLTAGE_CUTOFF_V", "2.5"))
 UPPER_VOLTAGE_CUTOFF_V = float(os.getenv("UPPER_VOLTAGE_CUTOFF_V", "4.2"))
 EXPERIMENT_PERIOD_S = os.getenv("EXPERIMENT_PERIOD_S", "10 seconds")
 DEFAULT_1C_CURRENT_A = float(os.getenv("DEFAULT_1C_CURRENT_A", "5.0"))

@@ -10,7 +10,7 @@ import pybamm
 # Environment variables can override these default values.
 NOMINAL_CELL_CAPACITY: float = float(os.getenv("NOMINAL_CELL_CAPACITY", "5.0"))
 UPPER_VOLTAGE_CUTOFF: float = float(os.getenv("UPPER_VOLTAGE_CUTOFF", "4.2"))
-LOWER_VOLTAGE_CUTOFF: float = float(os.getenv("LOWER_VOLTAGE_CUTOFF", "3.0"))
+LOWER_VOLTAGE_CUTOFF: float = float(os.getenv("LOWER_VOLTAGE_CUTOFF", "2.5"))
 AMBIENT_TEMPERATURE: float = float(os.getenv("AMBIENT_TEMPERATURE", "333.15"))
 SIMULATION_PERIOD: str = os.getenv("SIMULATION_PERIOD", "10 seconds")
 
