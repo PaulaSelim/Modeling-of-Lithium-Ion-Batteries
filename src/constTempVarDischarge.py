@@ -15,7 +15,7 @@ AMBIENT_TEMPERATURE: float = float(os.getenv("AMBIENT_TEMPERATURE", "333.15"))
 SIMULATION_PERIOD: str = os.getenv("SIMULATION_PERIOD", "10 seconds")
 
 # Experiment currents (in A)
-CURRENT_AMPS = {"0.5C": 2.5, "1C": 5.0, "2C": 10.0}
+CURRENT_AMPS = {"0.2C": 1,"0.5C": 2.5, "1C": 5.0, "2C": 10.0}
 
 # ===== Logging Configuration =====
 logging.basicConfig(
