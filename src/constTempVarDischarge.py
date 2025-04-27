@@ -15,7 +15,12 @@ AMBIENT_TEMPERATURE: float = float(os.getenv("AMBIENT_TEMPERATURE", "333.15"))
 SIMULATION_PERIOD: str = os.getenv("SIMULATION_PERIOD", "10 seconds")
 
 # Experiment currents (in A)
-CURRENT_AMPS = {"0.2C": 1,"0.5C": 2.5, "1C": 5.0, "2C": 10.0}
+CURRENT_AMPS = {"0.5C": 2.5, "1C": 5.0, "2C": 10.0}
+
+# Temperature conversion function
+def kelvin_to_celsius(temp_k: float) -> float:
+    """Convert temperature from Kelvin to Celsius"""
+    return temp_k - 273.15
 
 # ===== Logging Configuration =====
 logging.basicConfig(
@@ -133,13 +138,13 @@ def plot_experiment_results(results: dict) -> None:
         time_data, _, _, temperature_data, _ = data
         ax_temp_time.plot(
             time_data,
-            temperature_data,
+            kelvin_to_celsius(temperature_data),
             label=f"{c_rate} ({CURRENT_AMPS[c_rate]} A)",
         )
     configure_subplot(
         ax_temp_time,
         xlabel="Time (s)",
-        ylabel="Cell Temperature (K)",
+        ylabel="Cell Temperature (°C)",
         title="Cell Temperature vs. Time",
     )
     ax_temp_time.legend()
