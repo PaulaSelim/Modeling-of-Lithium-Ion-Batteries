@@ -3,6 +3,8 @@ import logging
 import dotenv
 from typing import Dict, Any
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import liionpack as lp
 import pybamm
@@ -294,7 +296,12 @@ def plot_simulation_results(data_dict: Dict[str, Dict[str, np.ndarray]]) -> None
     plt.tight_layout()
     
     logger.info("Displaying plots")
-    plt.show()
+    fig = plt.gcf()        # current figure
+    if matplotlib.get_backend().lower().endswith('agg'):
+        fig.savefig("plot.png")   # no GUI: save figure to PNG file
+    else:
+        plt.show()               # GUI available: display the window
+
 
 
 def main() -> None:
